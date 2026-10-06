@@ -18,6 +18,22 @@ git remote set-url --push kobo no_push
 git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 ```
 
+### Signing
+
+Every commit and tag made on the fork is signed with the ICRC SSH key. Add the public key on GitHub a second time as a **Signing key** (Settings > SSH and GPG keys) so commits show as Verified.
+
+```bash
+git config gpg.format ssh
+git config user.signingkey ~/.ssh/<icrc-key>.pub
+git config commit.gpgsign true
+git config tag.gpgsign true
+# Local verification: git log --show-signature, git tag -v <tag>
+echo "$(git config user.email) $(cat ~/.ssh/<icrc-key>.pub)" > .git/allowed_signers
+git config gpg.ssh.allowedSignersFile "$PWD/.git/allowed_signers"
+```
+
+The ruleset `immutable-icrc-tags` also requires the tagged commit to be signed. Upstream Kobo commits are not all signed, so signatures are not enforced on branches.
+
 ## Branches and tags
 
 | Ref | Base | Role |
@@ -103,7 +119,8 @@ A merge also brings the `kobo/main` commits its branch is based on. The release 
 git switch release/<kobo-version>-icrc
 sed -i 's/^version: .*/version: <kobo-version>-icrc.<n>/' Chart.yaml
 git commit -am "chore: release <kobo-version>-icrc.<n>"
-git tag <kobo-version>-icrc.<n> && git push origin release/<kobo-version>-icrc <kobo-version>-icrc.<n>
+git tag -s <kobo-version>-icrc.<n> -m "<kobo-version>-icrc.<n>" && git tag -v <kobo-version>-icrc.<n>
+git push origin release/<kobo-version>-icrc <kobo-version>-icrc.<n>
 ```
 
 Then update the tag in the umbrella chart, re-render it and review the baseline diff in `icrc-kobo-toolbox`. Each environment (test, uat, PROD) pins its own tag there.
