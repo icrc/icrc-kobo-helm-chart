@@ -24,7 +24,7 @@ git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 |---|---|---|
 | `kobo/main` | - | Kobo reference (remote-tracking, read only). |
 | `main` | `kobo/main` | Mirror of Kobo on the fork, never committed to. Pushing it triggers `publish-chart` if Actions are enabled on the fork. |
-| `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file), never proposed upstream. Always kept rebased on `kobo/main`. |
+| `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file, `work/`), never proposed upstream. Always kept rebased on `kobo/main`. |
 | `feature/<name>` | `kobo/main` | One per enhancement (upstream PR pending or rejected). Must bump `Chart.yaml` `version` and add a `CHANGELOG.md` entry (upstream CI). Not based on `icrc-bootstrap`, so the PR carries no fork-only change. |
 | `develop` | `icrc-bootstrap` | `icrc-bootstrap` + all feature branches, to try them together before a release. Never tagged. |
 | `release/<kobo-version>-icrc` | Kobo tag `<kobo-version>` | Kobo release + `icrc-bootstrap` changes + the feature branches validated for it. Deployed through the umbrella chart. One branch per Kobo release. |
@@ -36,6 +36,12 @@ git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 - Tags are never moved nor deleted.
 - Enforced by GitHub rulesets on `icrc/icrc-kobo-helm-chart`: no force-push or deletion on `release/*`, no update or deletion of `*-icrc.*` tags.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
+
+## Work tracking
+
+`work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
+
+Like this file, `work/` is fork-only: edit it on `icrc-bootstrap` only. Copies on `develop` and release branches are snapshots, refreshed when those branches are rebuilt.
 
 ## Tests
 
