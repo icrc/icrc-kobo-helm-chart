@@ -26,21 +26,19 @@ git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 | `main` | `kobo/main` | Mirror of Kobo on the fork, never committed to. Pushing it triggers `publish-chart` if Actions are enabled on the fork. |
 | `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file, `work/`, `.helmignore`), never proposed upstream. Seeds new release branches. |
 | `feature/<name>` | `kobo/main` | One per enhancement (upstream PR pending or rejected). Must bump `Chart.yaml` `version` and add a `CHANGELOG.md` entry (upstream CI). Not based on `icrc-bootstrap`, so the PR carries no fork-only change. |
-| `release/<kobo-version>-icrc` | Kobo tag `<kobo-version>` | Integration branch: Kobo release + `icrc-bootstrap` changes + every feature branch. Tagged and deployed through the umbrella chart. One branch per Kobo release. |
+| `release/<kobo-version>-icrc` | `icrc-bootstrap` on Kobo tag `<kobo-version>` | Integration branch: `icrc-bootstrap` + one merge per feature branch. Tagged and deployed through the umbrella chart. One branch per Kobo release. |
 | `<kobo-version>-icrc.<n>` tag | release branch | Build of the release branch, e.g. `7.0.0-icrc.1`. Also the chart version. |
 
-There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. `icrc-bootstrap` and `feature/*` carry no tags and are rewritten freely: rebased when `kobo/main` advances, force-pushed. Release branches and tags are frozen:
+There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. Branches are rewritten freely and force-pushed: `icrc-bootstrap` and `feature/*` are rebased when `kobo/main` advances, release branches are rebuilt when `icrc-bootstrap` changes. Tags are immutable:
 
-- A release branch only grows: new commits on top, never rebased nor force-pushed. A new Kobo release gets a new release branch.
-- Tags are never moved nor deleted.
-- Enforced by GitHub rulesets on `icrc/icrc-kobo-helm-chart`: no force-push or deletion on `release/*`, no update or deletion of `*-icrc.*` tags.
+- Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
 
 ## Work tracking
 
 `work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
 
-Like this file, `work/` is fork-only: edit it on the current release branch. `icrc-bootstrap` is refreshed from it before a new release branch is created (see [Applying features](#applying-features)).
+Like this file, `work/` is fork-only: edit it on `icrc-bootstrap`, then rebuild the release branch (see [Applying features](#applying-features)). Commits made directly on a release branch are lost at the next rebuild.
 
 ## Tests
 
@@ -79,26 +77,25 @@ git push --force-with-lease origin $(features) icrc-bootstrap
 
 On conflict a rebase stops: resolve, `git rebase --continue`, then re-run the commands (already rebased branches are no-ops). A Kobo release changes `Chart.yaml` `version` and `CHANGELOG.md`, so each version bump commit conflicts: re-bump above the new Kobo version.
 
-The release branch is not rebased: it stays on its Kobo release.
+Release branches stay on their Kobo release: they are rebuilt, not rebased on `kobo/main`.
 
 ## Applying features
 
-Release branches are `icrc-bootstrap` plus one `--no-ff` merge per feature branch, so `git log --merges` and `git branch --merged` show which features are integrated. Review changes are integrated by merging the branch again.
+Release branches are `icrc-bootstrap` plus one `--no-ff` merge per feature branch, so `git log --merges` and `git branch --merged` show which features are integrated.
 
 ```bash
-# Add a feature, or new commits of a feature, to the current release branch
-git switch release/<kobo-version>-icrc && git merge --no-ff feature/<name>
+# Add a feature, or review changes of a merged feature, to the release branch
+git switch release/<kobo-version>-icrc && git merge --no-ff -m "Merge branch 'feature/<name>' into release/<kobo-version>-icrc" feature/<name>
 
-# New release branch for a new Kobo release: refresh icrc-bootstrap from the current release branch,
-# rebase it on the Kobo tag, then merge the features not included in that Kobo release
-git switch icrc-bootstrap && git checkout release/<current>-icrc -- ICRC.md work/ .helmignore && git commit -m "docs: refresh fork docs"
-git rebase kobo/main && git push --force-with-lease origin icrc-bootstrap
-git switch -c release/<kobo-version>-icrc icrc-bootstrap && git merge --no-ff feature/<a> && git merge --no-ff feature/<b>
+# Rebuild the release branch (icrc-bootstrap changed, or a feature branch was rebased), or create it for a new Kobo release
+git switch -C release/<kobo-version>-icrc icrc-bootstrap
+git merge --no-ff -m "Merge branch 'feature/<a>' into release/<kobo-version>-icrc" feature/<a>   # one per feature branch
+git push --force-with-lease origin release/<kobo-version>-icrc
 ```
 
-Each merge after the first conflicts on the version bump commit (`chore: release ...`, needed by upstream CI): keep any `Chart.yaml` `version` (it is overwritten when tagging), and keep every `CHANGELOG.md` entry.
+Each merge after the first conflicts on the version bump commit (`chore: release ...`, needed by upstream CI): keep any `Chart.yaml` `version` (it is overwritten when tagging), and keep every `CHANGELOG.md` entry. Compare the rebuilt tree with the previous one (`git diff origin/release/<kobo-version>-icrc`) before pushing.
 
-A merge also brings the `kobo/main` commits the feature branch is based on. If `kobo/main` has moved past the release tag, merge a copy rebased onto the tag instead: `git switch -c tmp feature/<name> && git rebase --onto <kobo-version> kobo/main`, then merge `tmp` with `-m "Merge branch 'feature/<name>'"`. Likewise, create a new release branch when `icrc-bootstrap` is based on that Kobo release (`kobo/main` at the tag); otherwise base it on the tag and cherry-pick `kobo/main..icrc-bootstrap`.
+A merge also brings the `kobo/main` commits its branch is based on. The release branch must only contain the Kobo release, so this works while `kobo/main` has no commits past the release tag other than CI. Otherwise, rebuild from a copy of `icrc-bootstrap` and of each feature branch rebased onto the tag (`git rebase --onto <kobo-version> kobo/main <copy>`).
 
 ## Tagging a release
 
