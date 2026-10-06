@@ -56,7 +56,7 @@ helm lint --strict -f tests/values/required.yaml .
 
 1. Create `feature/<name>` from `kobo/main`. Commit the fix with its tests (`tests/<suite>_test.yaml`, plus `tests/values/required.yaml` if missing), then a separate commit with the version bump and changelog entry.
 2. Push to `origin`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch.
-3. Cherry-pick the fix commit onto the current release branch (see [Applying features](#applying-features)), without the version bump. Same for later review changes. Tag a patch to ship it.
+3. Merge the branch into the current release branch (see [Applying features](#applying-features)). Merge it again after review changes. Tag a patch to ship it.
 4. Merged upstream: delete the branch once a Kobo release includes it. Rejected: keep the branch, it is carried to every release branch.
 
 ## Syncing with Kobo
@@ -83,21 +83,22 @@ The release branch is not rebased: it stays on its Kobo release.
 
 ## Applying features
 
-Release branches are a Kobo release plus the feature commits, without their version bump commits (`chore: release ...`), which only serve upstream CI.
+Release branches are `icrc-bootstrap` plus one `--no-ff` merge per feature branch, so `git log --merges` and `git branch --merged` show which features are integrated. Review changes are integrated by merging the branch again.
 
 ```bash
-# apply <branch>...: cherry-pick the branch commits (kobo/main..<branch>) onto the current branch
-apply() { for b; do git cherry-pick $(git rev-list --reverse --invert-grep --grep='^chore: release' kobo/main.."$b") || return; done; }
-features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/; }
-
 # Add a feature, or new commits of a feature, to the current release branch
-git switch release/<kobo-version>-icrc && git cherry-pick <commit>...
+git switch release/<kobo-version>-icrc && git merge --no-ff feature/<name>
 
 # New release branch for a new Kobo release: refresh icrc-bootstrap from the current release branch,
-# then apply it and the features not included in that Kobo release
+# rebase it on the Kobo tag, then merge the features not included in that Kobo release
 git switch icrc-bootstrap && git checkout release/<current>-icrc -- ICRC.md work/ .helmignore && git commit -m "docs: refresh fork docs"
-git switch -c release/<kobo-version>-icrc <kobo-version> && apply icrc-bootstrap feature/<a> feature/<b>
+git rebase kobo/main && git push --force-with-lease origin icrc-bootstrap
+git switch -c release/<kobo-version>-icrc icrc-bootstrap && git merge --no-ff feature/<a> && git merge --no-ff feature/<b>
 ```
+
+Each merge after the first conflicts on the version bump commit (`chore: release ...`, needed by upstream CI): keep any `Chart.yaml` `version` (it is overwritten when tagging), and keep every `CHANGELOG.md` entry.
+
+A merge also brings the `kobo/main` commits the feature branch is based on. If `kobo/main` has moved past the release tag, merge a copy rebased onto the tag instead: `git switch -c tmp feature/<name> && git rebase --onto <kobo-version> kobo/main`, then merge `tmp` with `-m "Merge branch 'feature/<name>'"`. Likewise, create a new release branch when `icrc-bootstrap` is based on that Kobo release (`kobo/main` at the tag); otherwise base it on the tag and cherry-pick `kobo/main..icrc-bootstrap`.
 
 ## Tagging a release
 
