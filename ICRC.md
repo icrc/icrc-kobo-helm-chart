@@ -24,13 +24,12 @@ git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 |---|---|---|
 | `kobo/main` | - | Kobo reference (remote-tracking, read only). |
 | `main` | `kobo/main` | Mirror of Kobo on the fork, never committed to. Pushing it triggers `publish-chart` if Actions are enabled on the fork. |
-| `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file, `work/`), never proposed upstream. Always kept rebased on `kobo/main`. |
+| `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file, `work/`, `.helmignore`), never proposed upstream. Seeds new release branches. |
 | `feature/<name>` | `kobo/main` | One per enhancement (upstream PR pending or rejected). Must bump `Chart.yaml` `version` and add a `CHANGELOG.md` entry (upstream CI). Not based on `icrc-bootstrap`, so the PR carries no fork-only change. |
-| `develop` | `icrc-bootstrap` | `icrc-bootstrap` + all feature branches, to try them together before a release. Never tagged. |
-| `release/<kobo-version>-icrc` | Kobo tag `<kobo-version>` | Kobo release + `icrc-bootstrap` changes + the feature branches validated for it. Deployed through the umbrella chart. One branch per Kobo release. |
+| `release/<kobo-version>-icrc` | Kobo tag `<kobo-version>` | Integration branch: Kobo release + `icrc-bootstrap` changes + every feature branch. Tagged and deployed through the umbrella chart. One branch per Kobo release. |
 | `<kobo-version>-icrc.<n>` tag | release branch | Build of the release branch, e.g. `7.0.0-icrc.1`. Also the chart version. |
 
-`icrc-bootstrap`, `feature/*` and `develop` carry no tags and are rewritten freely: rebased when `kobo/main` advances, force-pushed. `develop` has no commits of its own beyond `icrc-bootstrap` and feature commits. Release branches and tags are frozen:
+There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. `icrc-bootstrap` and `feature/*` carry no tags and are rewritten freely: rebased when `kobo/main` advances, force-pushed. Release branches and tags are frozen:
 
 - A release branch only grows: new commits on top, never rebased nor force-pushed. A new Kobo release gets a new release branch.
 - Tags are never moved nor deleted.
@@ -41,7 +40,7 @@ git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
 
 `work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
 
-Like this file, `work/` is fork-only: edit it on `icrc-bootstrap` only. Copies on `develop` and release branches are snapshots, refreshed when those branches are rebuilt.
+Like this file, `work/` is fork-only: edit it on the current release branch. `icrc-bootstrap` is refreshed from it before a new release branch is created (see [Applying features](#applying-features)).
 
 ## Tests
 
@@ -57,9 +56,8 @@ helm lint --strict -f tests/values/required.yaml .
 
 1. Create `feature/<name>` from `kobo/main`. Commit the fix with its tests (`tests/<suite>_test.yaml`, plus `tests/values/required.yaml` if missing), then a separate commit with the version bump and changelog entry.
 2. Push to `origin`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch.
-3. Cherry-pick its commits onto `develop` (see [Applying features](#applying-features)) to try it with the other features. Same for later review changes.
-4. To ship it, cherry-pick its commits onto the current release branch and tag a patch.
-5. Merged upstream: delete the branch and recreate `develop`. Rejected: keep the branch, it is carried to every release.
+3. Cherry-pick the fix commit onto the current release branch (see [Applying features](#applying-features)), without the version bump. Same for later review changes. Tag a patch to ship it.
+4. Merged upstream: delete the branch once a Kobo release includes it. Rejected: keep the branch, it is carried to every release branch.
 
 ## Syncing with Kobo
 
@@ -70,37 +68,35 @@ git fetch kobo --tags --prune
 git switch main && git merge --ff-only kobo/main && git push origin main
 ```
 
-**No PR merged upstream**: rebase every feature branch, then `develop` together with `icrc-bootstrap` (`--update-refs` moves `icrc-bootstrap` along with the stack).
+Then rebase every feature branch that is not merged upstream, and `icrc-bootstrap`. Merged feature branches are left as they are until a Kobo release includes them.
 
 ```bash
 # Works in bash and zsh
 features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/; }
-for b in $(features); do git rebase kobo/main "$b" || break; done
-git rebase --update-refs kobo/main develop
-git push --force-with-lease origin $(features) icrc-bootstrap develop
+for b in $(features) icrc-bootstrap; do git rebase kobo/main "$b" || break; done
+git push --force-with-lease origin $(features) icrc-bootstrap
 ```
 
 On conflict a rebase stops: resolve, `git rebase --continue`, then re-run the commands (already rebased branches are no-ops). A Kobo release changes `Chart.yaml` `version` and `CHANGELOG.md`, so each version bump commit conflicts: re-bump above the new Kobo version.
 
-**A PR was merged upstream**: delete its feature branch, rebase the remaining feature branches and `icrc-bootstrap` (`git rebase kobo/main icrc-bootstrap`), then recreate `develop` instead of rebasing it. Its copy of the feature commits would conflict with, or duplicate, the upstream merge (often squashed, so Git does not recognize them).
+The release branch is not rebased: it stays on its Kobo release.
 
 ## Applying features
 
-`develop` and release branches are built the same way: a base plus the feature commits, without their version bump commits (`chore: release ...`), which only serve upstream CI.
+Release branches are a Kobo release plus the feature commits, without their version bump commits (`chore: release ...`), which only serve upstream CI.
 
 ```bash
 # apply <branch>...: cherry-pick the branch commits (kobo/main..<branch>) onto the current branch
 apply() { for b; do git cherry-pick $(git rev-list --reverse --invert-grep --grep='^chore: release' kobo/main.."$b") || return; done; }
 features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/; }
 
-# Recreate develop
-git switch -C develop icrc-bootstrap && apply $(features) && git push --force-with-lease origin develop
+# Add a feature, or new commits of a feature, to the current release branch
+git switch release/<kobo-version>-icrc && git cherry-pick <commit>...
 
-# New release branch from a Kobo release, with the fork-only changes and the validated features
+# New release branch for a new Kobo release: refresh icrc-bootstrap from the current release branch,
+# then apply it and the features not included in that Kobo release
+git switch icrc-bootstrap && git checkout release/<current>-icrc -- ICRC.md work/ .helmignore && git commit -m "docs: refresh fork docs"
 git switch -c release/<kobo-version>-icrc <kobo-version> && apply icrc-bootstrap feature/<a> feature/<b>
-
-# Add new commits of a feature to develop or to an existing release branch
-git cherry-pick <commit>...
 ```
 
 ## Tagging a release

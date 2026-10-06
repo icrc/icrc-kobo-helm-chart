@@ -1,33 +1,21 @@
 # Upstream issues for kobotoolbox/kobo-helm-chart (draft)
 
-Drafts for [phase 2](./icrc-helm-phase2-upstream.md) step 0 (#727250). Post from the ICRC GitHub account, then record the issue numbers in the table.
+Drafts for [phase 2](./icrc-helm-phase2-upstream.md) step 0 (#727250). Posted from the ICRC GitHub account; issue and PR links, ADO items and gap IDs are tracked in the phase 2 steps table only.
 
 ## Existing upstream items
 
 | Item | State | Relevance |
-|---|---|---|---|
-| [#23](https://github.com/kobotoolbox/kobo-helm-chart/issues/23) Support existing secrets/config mapping | open (2023) | Same need as S4. Maintainer asked to follow the bitnami `existingSecret` convention. Comment there instead of opening a new issue. |
-| [#95](https://github.com/kobotoolbox/kobo-helm-chart/pull/95) existingSecret pattern | open PR (2026-01), no review | Based on pre-valkey `main`; removes `DJANGO_SECRET_KEY` / `ENKETO_API_KEY` from the generated secret for all users; one secret shared by kpi and enketo; migration Job still inlines `DJANGO_SECRET_KEY` and requires `DATABASE_URL`; post-install Job not covered; escaped quotes (`\"`) in beat and worker templates break rendering. Not reusable as is. |
-| [#33](https://github.com/kobotoolbox/kobo-helm-chart/pull/33) Implement Image Pull Secrets | closed unmerged (2023) | Same need as S3. Reference it. |
+|---|---|---|
+| [issue 23](https://github.com/kobotoolbox/kobo-helm-chart/issues/23) Support existing secrets/config mapping | open (2023) | Same need as S4. Maintainer asked to follow the bitnami `existingSecret` convention. Comment there instead of opening a new issue. |
+| [PR 95](https://github.com/kobotoolbox/kobo-helm-chart/pull/95) existingSecret pattern | open PR (2026-01), no review | Based on pre-valkey `main`; removes `DJANGO_SECRET_KEY` / `ENKETO_API_KEY` from the generated secret for all users; one secret shared by kpi and enketo; migration Job still inlines `DJANGO_SECRET_KEY` and requires `DATABASE_URL`; post-install Job not covered; escaped quotes (`\"`) in beat and worker templates break rendering. Not reusable as is. |
+| [PR 33](https://github.com/kobotoolbox/kobo-helm-chart/pull/33) Implement Image Pull Secrets | closed unmerged (2023) | Same need as S3. Reference it. |
 | `feature/existing-secrets` branch | stale (2023) | Only adds empty `existingSecret` keys for subcharts. Nothing to reuse. |
 
-No existing item for OpenShift / unprivileged nginx, `X-Forwarded-Proto`, post-install `envFrom`, filesystem protected media or tests. Several external PRs (#75 to #79) are unreviewed: expect slow merges.
-
-## Tracking
-
-| ADO | Topic | GitHub | PR |
-|---|---|---|---|
-| #727218 | Existing secrets (S4) | [#23 comment](https://github.com/kobotoolbox/kobo-helm-chart/issues/23#issuecomment-5993930688) | |
-| #727219 | Post-install Job env (W6) | [#113](https://github.com/kobotoolbox/kobo-helm-chart/issues/113) | [#119](https://github.com/kobotoolbox/kobo-helm-chart/pull/119) |
-| #727220 | nginx sidecar port and securityContext (S2) | [#114](https://github.com/kobotoolbox/kobo-helm-chart/issues/114) | |
-| #727221 | nginx sidecar filesystem protected media (D2) | [#115](https://github.com/kobotoolbox/kobo-helm-chart/issues/115) | |
-| #727222 | nginx sidecar `X-Forwarded-Proto` (S8) | [#116](https://github.com/kobotoolbox/kobo-helm-chart/issues/116) | [#120](https://github.com/kobotoolbox/kobo-helm-chart/pull/120) |
-| #727223 | `imagePullSecrets` (S3) | [#117](https://github.com/kobotoolbox/kobo-helm-chart/issues/117) | [#121](https://github.com/kobotoolbox/kobo-helm-chart/pull/121) |
-| #727217 | helm-unittest suite | [#118](https://github.com/kobotoolbox/kobo-helm-chart/issues/118) | |
+No existing item for OpenShift / unprivileged nginx, `X-Forwarded-Proto`, post-install `envFrom`, filesystem protected media or tests. Several external PRs ([PR 75](https://github.com/kobotoolbox/kobo-helm-chart/pull/75) to [PR 79](https://github.com/kobotoolbox/kobo-helm-chart/pull/79)) are unreviewed: expect slow merges.
 
 ---
 
-## 1. Comment on #23: existing secrets for kpi and enketo
+## 1. Comment on [issue 23](https://github.com/kobotoolbox/kobo-helm-chart/issues/23): existing secrets for kpi and enketo
 
 We would like to work on this and open a PR. Proposed scope, before writing code:
 
@@ -39,7 +27,7 @@ We would like to work on this and open a PR. Proposed scope, before writing code
 
 Open questions: one value per component as above, or a single `kobotoolbox.existingSecret`? Should the `checksum/secret` annotation be dropped when an existing secret is used (it no longer reflects the content)?
 
-PR #95 covers part of this but removes keys from the generated secret for all users; we would start from current `main` instead. Happy to coordinate with its author.
+[PR 95](https://github.com/kobotoolbox/kobo-helm-chart/pull/95) covers part of this but removes keys from the generated secret for all users; we would start from current `main` instead. Happy to coordinate with its author.
 
 ## 2. Post-install Job does not load the kpi secret and configmap
 
@@ -83,7 +71,7 @@ proxy_set_header X-Forwarded-Proto $forwarded_proto;
 
 ## 6. imagePullSecrets is declared but never rendered
 
-**Problem.** `values.yaml` declares `imagePullSecrets: []`, but no template uses it. Pulling kpi/enketo/nginx from a private registry requires patching the ServiceAccount outside the chart. PR #33 (2023) addressed this on the ServiceAccount but was closed unmerged.
+**Problem.** `values.yaml` declares `imagePullSecrets: []`, but no template uses it. Pulling kpi/enketo/nginx from a private registry requires patching the ServiceAccount outside the chart. [PR 33](https://github.com/kobotoolbox/kobo-helm-chart/pull/33) (2023) addressed this on the ServiceAccount but was closed unmerged.
 
 **Proposal.** Render `imagePullSecrets` in every pod spec (kpi, enketo, beat, workers, flower, Jobs), so it also works with `serviceAccount.create: false`. Format: list of `{name: ...}` objects, as in the default `helm create` scaffold.
 
