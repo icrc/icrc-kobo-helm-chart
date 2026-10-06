@@ -21,3 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
+# ICRC fork-only files
+ICRC.md
+work/
