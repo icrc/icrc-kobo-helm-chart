@@ -92,7 +92,7 @@ Feature #<feature>, PBI #<pbi>.
 ## 4. Create the work items
 
 1. Feature: default **#725060** ("KOBO enterprise implementation in ICRC infra"). Verify its type is `Feature` before use; ask if the user names another.
-2. Create the PBI under it: title `Kobo Helm - Sync fork with Kobo <YYYY-MM-DD>`, iteration and assignee (`uniqueName`, never the email) taken from the latest PBI under the Feature. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-bootstrap</code>).</div>`. Confirm before creating (outward-facing).
+2. Create the PBI under it: title `Kobo Helm - Sync fork with Kobo <YYYY-MM-DD>`, iteration and area taken from the latest PBI under the Feature, assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-bootstrap</code>).</div>`. Confirm before creating (outward-facing).
 3. Write the Feature and PBI IDs in the plan's `## Work items` line, then run the `azdo-plan-sync` skill to create one Task per section and fill the table.
 
 ## 5. Commit
