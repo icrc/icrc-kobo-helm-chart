@@ -17,10 +17,10 @@ Git network calls are wrapped in `timeout 60`. If an SSH push or fetch hangs, us
 
 ## 1. Preconditions
 
-- Clean working tree. The plan is written on `icrc-bootstrap` (`work/` is fork-only).
+- Clean working tree. The plan is written on `icrc-base` (`work/` is fork-only).
 - No open `work/ongoing/kobo-sync-*.md`: if one exists, offer to continue it instead.
 - `timeout 60 git fetch kobo --tags --prune && timeout 60 git fetch icrc --prune`.
-- Local branches equal `icrc`: `git rev-list --left-right --count icrc/<b>...<b>` is `0 0` for `main`, `icrc-bootstrap`, `feature/*`, `release/*`. Otherwise stop and report (upstream tracking of these branches points to `kobo/main`, so `git status` is not a reliable check). Exception: a local `feature/*` missing on `icrc` whose PR is merged (GitHub deleted it) is not a mismatch, plan its deletion. If `icrc` has a merge of `main` into a feature branch (GitHub "Update branch"), propose rebasing the local branch instead (`ICRC.md` "Contributing an enhancement").
+- Local branches equal `icrc`: `git rev-list --left-right --count icrc/<b>...<b>` is `0 0` for `main`, `icrc-base`, `feature/*`, `release/*`. Otherwise stop and report (upstream tracking of these branches points to `kobo/main`, so `git status` is not a reliable check). Exception: a local `feature/*` missing on `icrc` whose PR is merged (GitHub deleted it) is not a mismatch, plan its deletion. If `icrc` has a merge of `main` into a feature branch (GitHub "Update branch"), propose rebasing the local branch instead (`ICRC.md` "Contributing an enhancement").
 
 ## 2. Detect
 
@@ -40,9 +40,9 @@ gh pr list -R $R --state all --limit 200 \
   --json number,title,state,headRefName,headRepositoryOwner,author,comments,reviews,mergeCommit \
   --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .author.login as $a | [.number, .state, .headRefName, ([.comments[] | select(.author.login != $a) | .createdAt] + [.reviews[] | select(.author.login != $a) | .submittedAt] | sort | last // "-"), (.mergeCommit.oid // "-")] | @tsv'   # C
 git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'                           # C: merged PR released?
-for b in $(features) icrc-bootstrap; do git merge-base --is-ancestor kobo/main "$b" || echo "$b"; done            # D: to rebase
+for b in $(features) icrc-base; do git merge-base --is-ancestor kobo/main "$b" || echo "$b"; done            # D: to rebase
 for b in $(features); do git merge-base --is-ancestor "$b" "icrc/$(release)" || echo "$b"; done                  # E: missing from release
-git log --oneline "icrc/$(release)..icrc-bootstrap" -- . ':!ICRC.md' ':!work' ':!.claude'                       # E: bootstrap chart changes missing from release (docs-only commits ignored)
+git log --oneline "icrc/$(release)..icrc-base" -- . ':!ICRC.md' ':!work' ':!.claude'                       # E: bootstrap chart changes missing from release (docs-only commits ignored)
 ```
 
 - **C, new activity**: last comment or review by someone other than the PR author, after the date of the previous `work/completed/kobo-sync-*.md` (all activity on the first run). Read it with `gh pr view <n> -R $R --comments` and `gh api repos/$R/pulls/<n>/comments` and summarize each request in one line.
@@ -68,11 +68,11 @@ Sync of the fork with `kobo/main` at `<short-sha>` (procedure: `ICRC.md` "Syncin
 - [ ] Done when: every review request answered on its PR, merged branches deleted
 
 ## Rebase on kobo/main
-- [ ] Rebase and force-push: `feature/<a>`, ..., `icrc-bootstrap` (re-bump `Chart.yaml` above Kobo <version> on conflict)
+- [ ] Rebase and force-push: `feature/<a>`, ..., `icrc-base` (re-bump `Chart.yaml` above Kobo <version> on conflict)
 - [ ] Done when: every branch listed contains `kobo/main` and equals `icrc`
 
 ## Release <kobo-version>
-- [ ] Create `release/<kobo-version>-icrc` from `icrc-bootstrap` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
+- [ ] Create `release/<kobo-version>-icrc` from `icrc-base` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
 - [ ] `helm lint --strict -f tests/values/required.yaml .` and `helm unittest .` pass
 - [ ] Delete `release/<previous-version>-icrc` locally and on `icrc`
 - [ ] Done when: `release/<kobo-version>-icrc` pushed with lint and unit tests passing, previous release branch deleted
@@ -92,9 +92,9 @@ Feature #<feature>, PBI #<pbi>.
 ## 4. Create the work items
 
 1. Feature: default **#725060** ("KOBO enterprise implementation in ICRC infra"). Verify its type is `Feature` before use; ask if the user names another.
-2. Create the PBI under it: title `Kobo Helm - Sync fork with Kobo <YYYY-MM-DD>`, iteration and area taken from the latest PBI under the Feature, assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-bootstrap</code>).</div>`. Confirm before creating (outward-facing).
+2. Create the PBI under it: title `Kobo Helm - Sync fork with Kobo <YYYY-MM-DD>`, iteration and area taken from the latest PBI under the Feature, assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-base</code>).</div>`. Confirm before creating (outward-facing).
 3. Write the Feature and PBI IDs in the plan's `## Work items` line, then run the `azdo-plan-sync` skill to create one Task per section and fill the table.
 
 ## 5. Commit
 
-Commit the plan on `icrc-bootstrap` as `docs(work): plan Kobo sync <YYYY-MM-DD>` and push with `--force-with-lease` (ask first). The release branch picks the plan up at its next rebuild, which is part of the plan.
+Commit the plan on `icrc-base` as `docs(work): plan Kobo sync <YYYY-MM-DD>` and push with `--force-with-lease` (ask first). The release branch picks the plan up at its next rebuild, which is part of the plan.
