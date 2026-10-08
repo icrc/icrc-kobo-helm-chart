@@ -41,7 +41,8 @@ gh pr list -R $R --state all --limit 200 \
   --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .author.login as $a | [.number, .state, .headRefName, ([.comments[] | select(.author.login != $a) | .createdAt] + [.reviews[] | select(.author.login != $a) | .submittedAt] | sort | last // "-"), (.mergeCommit.oid // "-")] | @tsv'   # C
 git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'                           # C: merged PR released?
 for b in $(features) icrc-bootstrap; do git merge-base --is-ancestor kobo/main "$b" || echo "$b"; done            # D: to rebase
-for b in icrc-bootstrap $(features); do git merge-base --is-ancestor "$b" "icrc/$(release)" || echo "$b"; done  # E: missing from release
+for b in $(features); do git merge-base --is-ancestor "$b" "icrc/$(release)" || echo "$b"; done                  # E: missing from release
+git log --oneline "icrc/$(release)..icrc-bootstrap" -- . ':!ICRC.md' ':!work' ':!.claude'                       # E: bootstrap chart changes missing from release (docs-only commits ignored)
 ```
 
 - **C, new activity**: last comment or review by someone other than the PR author, after the date of the previous `work/completed/kobo-sync-*.md` (all activity on the first run). Read it with `gh pr view <n> -R $R --comments` and `gh api repos/$R/pulls/<n>/comments` and summarize each request in one line.
