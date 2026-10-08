@@ -42,12 +42,12 @@ The ruleset `immutable-icrc-tags` also requires the tagged commit to be signed. 
 | `main` | `kobo/main` | Mirror of Kobo on the fork, never committed to. Pushing it triggers `publish-chart` if Actions are enabled on the fork. |
 | `icrc-bootstrap` | `kobo/main` | `kobo/main` + fork-only changes (this file, `work/`, `.helmignore`), never proposed upstream. Seeds new release branches. |
 | `feature/<name>` | `kobo/main` | One per enhancement (upstream PR pending or rejected). Must bump `Chart.yaml` `version` and add a `CHANGELOG.md` entry (upstream CI). Not based on `icrc-bootstrap`, so the PR carries no fork-only change. |
-| `release/<kobo-version>-icrc` | `icrc-bootstrap` on Kobo tag `<kobo-version>` | Integration branch: `icrc-bootstrap` + one merge per feature branch. Tagged and deployed through the umbrella chart. One branch per Kobo release. |
+| `release/<kobo-version>-icrc` | `icrc-bootstrap` on Kobo tag `<kobo-version>` | Integration branch: `icrc-bootstrap` + one merge per feature branch. Tagged and deployed through the umbrella chart. Only the latest Kobo release has one: the previous branch is deleted once the next is created. |
 | `<kobo-version>-icrc.<n>` tag | release branch | Build of the release branch, e.g. `7.0.0-icrc.1`. Also the chart version. |
 
 There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. Branches are rewritten freely and force-pushed: `icrc-bootstrap` and `feature/*` are rebased when `kobo/main` advances, release branches are rebuilt when `icrc-bootstrap` changes. Tags are immutable:
 
-- Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch.
+- Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch, or the release branch is deleted.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
 
 ## Work tracking
@@ -69,13 +69,13 @@ helm lint --strict -f tests/values/required.yaml .
 ## Contributing an enhancement
 
 1. Create `feature/<name>` from `kobo/main`. Commit the fix with its tests (`tests/<suite>_test.yaml`, plus `tests/values/required.yaml` if missing), then a separate commit with the version bump and changelog entry.
-2. Push to `origin`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch.
+2. Push to `origin`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch. To bring the PR up to date with `kobo/main`, rebase and force-push (see [Syncing with Kobo](#syncing-with-kobo)); never use the GitHub "Update branch" button, it merges `kobo/main` into the feature branch and the release branch then gets `kobo/main` commits past its Kobo tag.
 3. Merge the branch into the current release branch (see [Applying features](#applying-features)). Merge it again after review changes. Tag a patch to ship it.
-4. Merged upstream: delete the branch once a Kobo release includes it. Rejected: keep the branch, it is carried to every release branch.
+4. Merged upstream: delete the branch. Rejected: keep the branch, it is carried to every release branch.
 
 ## Syncing with Kobo
 
-Run whenever `kobo/main` advances.
+Run whenever `kobo/main` advances. The Claude Code skill `/kobo-sync` (`.claude/skills/kobo-sync/`) detects what to do below, writes the plan `work/ongoing/kobo-sync-<date>.md` and creates its AzDO PBI and Tasks.
 
 ```bash
 git fetch kobo --tags --prune
@@ -97,11 +97,12 @@ gh pr list -R kobotoolbox/kobo-helm-chart --state all --limit 200 \
   gh api repos/kobotoolbox/kobo-helm-chart/pulls/<n>/comments --jq '.[] | "\(.path):\(.line) \(.user.login): \(.body)"'   # inline review comments
   ```
 
-- `MERGED`: the branch is no longer rebased. Once a Kobo release tag contains the merge commit, delete the branch; release branches for that Kobo release no longer merge it.
+- `MERGED`: delete the branch locally, and on `origin` if GitHub did not. Until a Kobo release tag contains the merge commit, rebuilds of the current release branch merge the PR head commit instead of the branch.
 
   ```bash
-  git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'   # empty: not released yet
   git branch -D feature/<name> && git push origin --delete feature/<name>
+  git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'   # empty: not released yet
+  gh pr view <n> -R kobotoolbox/kobo-helm-chart --json headRefOid --jq .headRefOid   # commit to merge while not released
   ```
 
 - `CLOSED` (rejected): keep the branch, it is carried to every release branch. Move the enhancement to the umbrella chart if it can be done without the fork.
@@ -118,7 +119,7 @@ git push --force-with-lease origin $(features) icrc-bootstrap
 
 On conflict a rebase stops: resolve, `git rebase --continue`, then re-run the commands (already rebased branches are no-ops). A Kobo release changes `Chart.yaml` `version` and `CHANGELOG.md`, so each version bump commit conflicts: re-bump above the new Kobo version.
 
-Release branches stay on their Kobo release: they are rebuilt, not rebased on `kobo/main`.
+Release branches stay on their Kobo release: they are rebuilt, not rebased on `kobo/main`. Once `release/<new-version>-icrc` is created, delete the previous release branch locally and on `origin`; its tags remain.
 
 ## Applying features
 

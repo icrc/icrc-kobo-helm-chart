@@ -24,3 +24,4 @@
 # ICRC fork-only files
 ICRC.md
 work/
+.claude/
