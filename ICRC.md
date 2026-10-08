@@ -82,11 +82,36 @@ git fetch kobo --tags --prune
 git switch main && git merge --ff-only kobo/main && git push origin main
 ```
 
-Then rebase every feature branch that is not merged upstream, and `icrc-bootstrap`. Merged feature branches are left as they are until a Kobo release includes them.
+Then check the state of the upstream PRs opened from the fork:
+
+```bash
+gh pr list -R kobotoolbox/kobo-helm-chart --state all --limit 200 \
+  --json number,state,headRefName,headRepositoryOwner,reviewDecision,comments,reviews,mergeCommit \
+  --jq '.[] | select(.headRepositoryOwner.login=="icrc") | [.number,.state,.headRefName,.reviewDecision,(.comments|length),(.reviews|length),.mergeCommit.oid] | @tsv'
+```
+
+- `OPEN`: read new comments and reviews, apply requested changes on the feature branch and merge it again into the release branch (see [Contributing an enhancement](#contributing-an-enhancement)).
+
+  ```bash
+  gh pr view <n> -R kobotoolbox/kobo-helm-chart --comments
+  gh api repos/kobotoolbox/kobo-helm-chart/pulls/<n>/comments --jq '.[] | "\(.path):\(.line) \(.user.login): \(.body)"'   # inline review comments
+  ```
+
+- `MERGED`: the branch is no longer rebased. Once a Kobo release tag contains the merge commit, delete the branch; release branches for that Kobo release no longer merge it.
+
+  ```bash
+  git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'   # empty: not released yet
+  git branch -D feature/<name> && git push origin --delete feature/<name>
+  ```
+
+- `CLOSED` (rejected): keep the branch, it is carried to every release branch. Move the enhancement to the umbrella chart if it can be done without the fork.
+
+Then rebase every feature branch not merged upstream, and `icrc-bootstrap`.
 
 ```bash
 # Works in bash and zsh
-features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/; }
+merged() { gh pr list -R kobotoolbox/kobo-helm-chart --state merged --limit 200 --json headRefName,headRepositoryOwner --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .headRefName'; }
+features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/ | grep -vxF -f <(merged); }
 for b in $(features) icrc-bootstrap; do git rebase kobo/main "$b" || break; done
 git push --force-with-lease origin $(features) icrc-bootstrap
 ```
