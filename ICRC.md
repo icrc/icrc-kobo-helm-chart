@@ -141,7 +141,7 @@ A merge also brings the `kobo/main` commits its branch is based on. The release 
 
 ## Tagging a release
 
-No tag until the umbrella chart is released: until then, tests use the release branch as reference. The first `*-icrc.*` tag comes with the first umbrella release; from then on, every release branch change that ships is tagged.
+Tagging is the release procedure, separate from [Syncing with Kobo](#syncing-with-kobo): a sync only rebuilds release branches. No tag until the umbrella chart is released; until then, tests use the release branch as reference.
 
 ```bash
 git switch release/<kobo-version>-icrc
