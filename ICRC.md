@@ -50,6 +50,8 @@ There is no separate integration branch: features are tried on the release branc
 - Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch, or the release branch is deleted.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
 
+> Reminder: `icrc-kobo-toolbox` tracks the release branch as its `kobo-helm-chart` submodule. Do not forget to update it after a rebuild or a new release branch, see "Submodules" in its [README.md](https://tfs.ext.icrc.org/ICRCCollection/DIOP%20SHARED%20Products/_git/kobo-toolbox?path=/README.md).
+
 ## Work tracking
 
 `work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
