@@ -6,13 +6,13 @@ ICRC fork of [kobotoolbox/kobo-helm-chart](https://github.com/kobotoolbox/kobo-h
 
 | Remote | URL | Push |
 |---|---|---|
-| `origin` | git@github.com:icrc/icrc-kobo-helm-chart.git | yes |
+| `icrc` | git@github.com:icrc/icrc-kobo-helm-chart.git | yes |
 | `kobo` | https://github.com/kobotoolbox/kobo-helm-chart.git | disabled |
 
 The `icrc` organization enforces SAML SSO: the SSH key (or token) must be authorized for it in GitHub settings. Pin the ICRC key to this repository when the machine also holds a personal GitHub key.
 
 ```bash
-git clone git@github.com:icrc/icrc-kobo-helm-chart.git && cd icrc-kobo-helm-chart
+git clone -o icrc git@github.com:icrc/icrc-kobo-helm-chart.git && cd icrc-kobo-helm-chart   # existing clone: git remote rename origin icrc
 git remote add kobo https://github.com/kobotoolbox/kobo-helm-chart.git
 git remote set-url --push kobo no_push
 git config core.sshCommand "ssh -i ~/.ssh/<icrc-key> -o IdentitiesOnly=yes"
@@ -69,7 +69,7 @@ helm lint --strict -f tests/values/required.yaml .
 ## Contributing an enhancement
 
 1. Create `feature/<name>` from `kobo/main`. Commit the fix with its tests (`tests/<suite>_test.yaml`, plus `tests/values/required.yaml` if missing), then a separate commit with the version bump and changelog entry.
-2. Push to `origin`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch. To bring the PR up to date with `kobo/main`, rebase and force-push (see [Syncing with Kobo](#syncing-with-kobo)); never use the GitHub "Update branch" button, it merges `kobo/main` into the feature branch and the release branch then gets `kobo/main` commits past its Kobo tag.
+2. Push to `icrc`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch. To bring the PR up to date with `kobo/main`, rebase and force-push (see [Syncing with Kobo](#syncing-with-kobo)); never use the GitHub "Update branch" button, it merges `kobo/main` into the feature branch and the release branch then gets `kobo/main` commits past its Kobo tag.
 3. Merge the branch into the current release branch (see [Applying features](#applying-features)). Merge it again after review changes. Tag a patch to ship it.
 4. Merged upstream: delete the branch. Rejected: keep the branch, it is carried to every release branch.
 
@@ -79,7 +79,7 @@ Run whenever `kobo/main` advances. The Claude Code skill `/kobo-sync` (`.claude/
 
 ```bash
 git fetch kobo --tags --prune
-git switch main && git merge --ff-only kobo/main && git push origin main
+git switch main && git merge --ff-only kobo/main && git push icrc main
 ```
 
 Then check the state of the upstream PRs opened from the fork:
@@ -97,10 +97,10 @@ gh pr list -R kobotoolbox/kobo-helm-chart --state all --limit 200 \
   gh api repos/kobotoolbox/kobo-helm-chart/pulls/<n>/comments --jq '.[] | "\(.path):\(.line) \(.user.login): \(.body)"'   # inline review comments
   ```
 
-- `MERGED`: delete the branch locally, and on `origin` if GitHub did not. Until a Kobo release tag contains the merge commit, rebuilds of the current release branch merge the PR head commit instead of the branch.
+- `MERGED`: delete the branch locally, and on `icrc` if GitHub did not. Until a Kobo release tag contains the merge commit, rebuilds of the current release branch merge the PR head commit instead of the branch.
 
   ```bash
-  git branch -D feature/<name> && git push origin --delete feature/<name>
+  git branch -D feature/<name> && git push icrc --delete feature/<name>
   git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'   # empty: not released yet
   gh pr view <n> -R kobotoolbox/kobo-helm-chart --json headRefOid --jq .headRefOid   # commit to merge while not released
   ```
@@ -114,12 +114,12 @@ Then rebase every feature branch not merged upstream, and `icrc-bootstrap`.
 merged() { gh pr list -R kobotoolbox/kobo-helm-chart --state merged --limit 200 --json headRefName,headRepositoryOwner --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .headRefName'; }
 features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/ | grep -vxF -f <(merged); }
 for b in $(features) icrc-bootstrap; do git rebase kobo/main "$b" || break; done
-git push --force-with-lease origin $(features) icrc-bootstrap
+git push --force-with-lease icrc $(features) icrc-bootstrap
 ```
 
 On conflict a rebase stops: resolve, `git rebase --continue`, then re-run the commands (already rebased branches are no-ops). A Kobo release changes `Chart.yaml` `version` and `CHANGELOG.md`, so each version bump commit conflicts: re-bump above the new Kobo version.
 
-Release branches stay on their Kobo release: they are rebuilt, not rebased on `kobo/main`. Once `release/<new-version>-icrc` is created, delete the previous release branch locally and on `origin`; its tags remain.
+Release branches stay on their Kobo release: they are rebuilt, not rebased on `kobo/main`. Once `release/<new-version>-icrc` is created, delete the previous release branch locally and on `icrc`; its tags remain.
 
 ## Applying features
 
@@ -132,10 +132,10 @@ git switch release/<kobo-version>-icrc && git merge --no-ff -m "Merge branch 'fe
 # Rebuild the release branch (icrc-bootstrap changed, or a feature branch was rebased), or create it for a new Kobo release
 git switch -C release/<kobo-version>-icrc icrc-bootstrap
 git merge --no-ff -m "Merge branch 'feature/<a>' into release/<kobo-version>-icrc" feature/<a>   # one per feature branch
-git push --force-with-lease origin release/<kobo-version>-icrc
+git push --force-with-lease icrc release/<kobo-version>-icrc
 ```
 
-Each merge after the first conflicts on the version bump commit (`chore: release ...`, needed by upstream CI): keep any `Chart.yaml` `version` (it is overwritten when tagging), and keep every `CHANGELOG.md` entry. Compare the rebuilt tree with the previous one (`git diff origin/release/<kobo-version>-icrc`) before pushing.
+Each merge after the first conflicts on the version bump commit (`chore: release ...`, needed by upstream CI): keep any `Chart.yaml` `version` (it is overwritten when tagging), and keep every `CHANGELOG.md` entry. Compare the rebuilt tree with the previous one (`git diff icrc/release/<kobo-version>-icrc`) before pushing.
 
 A merge also brings the `kobo/main` commits its branch is based on. The release branch must only contain the Kobo release, so this works while `kobo/main` has no commits past the release tag other than CI. Otherwise, rebuild from a copy of `icrc-bootstrap` and of each feature branch rebased onto the tag (`git rebase --onto <kobo-version> kobo/main <copy>`).
 
@@ -146,7 +146,7 @@ git switch release/<kobo-version>-icrc
 sed -i 's/^version: .*/version: <kobo-version>-icrc.<n>/' Chart.yaml
 git commit -am "chore: release <kobo-version>-icrc.<n>"
 git tag -s <kobo-version>-icrc.<n> -m "<kobo-version>-icrc.<n>" && git tag -v <kobo-version>-icrc.<n>
-git push origin release/<kobo-version>-icrc <kobo-version>-icrc.<n>
+git push icrc release/<kobo-version>-icrc <kobo-version>-icrc.<n>
 ```
 
 Then update the tag in the umbrella chart, re-render it and review the baseline diff in `icrc-kobo-toolbox`. Each environment (test, uat, PROD) pins its own tag there.
