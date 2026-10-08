@@ -70,7 +70,7 @@ helm lint --strict -f tests/values/required.yaml .
 
 1. Create `feature/<name>` from `kobo/main`. Commit the fix with its tests (`tests/<suite>_test.yaml`, plus `tests/values/required.yaml` if missing), then a separate commit with the version bump and changelog entry.
 2. Push to `icrc`, open the PR against `kobotoolbox/kobo-helm-chart:main`. Apply review changes on the feature branch. To bring the PR up to date with `kobo/main`, rebase and force-push (see [Syncing with Kobo](#syncing-with-kobo)); never use the GitHub "Update branch" button, it merges `kobo/main` into the feature branch and the release branch then gets `kobo/main` commits past its Kobo tag.
-3. Merge the branch into the current release branch (see [Applying features](#applying-features)). Merge it again after review changes. Tag a patch to ship it.
+3. Merge the branch into the current release branch (see [Applying features](#applying-features)). Merge it again after review changes. Tag a patch to ship it (see [Tagging a release](#tagging-a-release)).
 4. Merged upstream: delete the branch. Rejected: keep the branch, it is carried to every release branch.
 
 ## Syncing with Kobo
@@ -140,6 +140,8 @@ Each merge after the first conflicts on the version bump commit (`chore: release
 A merge also brings the `kobo/main` commits its branch is based on. The release branch must only contain the Kobo release, so this works while `kobo/main` has no commits past the release tag other than CI. Otherwise, rebuild from a copy of `icrc-bootstrap` and of each feature branch rebased onto the tag (`git rebase --onto <kobo-version> kobo/main <copy>`).
 
 ## Tagging a release
+
+No tag until the umbrella chart is released: until then, tests use the release branch as reference. The first `*-icrc.*` tag comes with the first umbrella release; from then on, every release branch change that ships is tagged.
 
 ```bash
 git switch release/<kobo-version>-icrc
