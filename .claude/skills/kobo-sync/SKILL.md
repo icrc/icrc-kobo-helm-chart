@@ -73,9 +73,9 @@ Sync of the fork with `kobo/main` at `<short-sha>` (procedure: `ICRC.md` "Syncin
 ## Release <kobo-version>
 - [ ] Create `release/<kobo-version>-icrc` from `icrc-bootstrap` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
 - [ ] `helm lint --strict -f tests/values/required.yaml .` and `helm unittest .` pass
-- [ ] Tag `<kobo-version>-icrc.1`, update the umbrella chart in `icrc-kobo-toolbox` and review its baseline diff
+- [ ] Tag `<kobo-version>-icrc.1`, update the umbrella chart in `icrc-kobo-toolbox` and review its baseline diff (only if tagging started)
 - [ ] Delete `release/<previous-version>-icrc` locally and on `icrc`
-- [ ] Done when: tag `<kobo-version>-icrc.1` pushed and pinned by the umbrella chart on test, previous release branch deleted
+- [ ] Done when: `release/<kobo-version>-icrc` pushed with lint and unit tests passing[, tag `<kobo-version>-icrc.1` pinned by the umbrella chart on test], previous release branch deleted
 
 ## Work items
 
@@ -86,6 +86,7 @@ Feature #<feature>, PBI #<pbi>.
 ```
 
 - **Release section**: "Release <kobo-version>" when B finds a new Kobo release (new branch + `.1` tag); else "Rebuild release/<v>-icrc" when D or E is non-empty (rebuild, compare with `icrc`, force-push, tag `.<n+1>` only if the tree changed outside `ICRC.md` and `work/`).
+- **Tagging started** when `git tag --list '*-icrc.*'` is non-empty (`ICRC.md` "Tagging a release"). Otherwise omit the tag and umbrella step and the bracketed part of "Done when".
 - If `kobo/main` has non-CI commits past the release tag, add a step to rebuild from copies rebased onto the tag (`ICRC.md` "Applying features").
 - Rebuilding the current release branch: list merged-but-unreleased PRs with their head commit to merge instead of the deleted branch.
 
