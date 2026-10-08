@@ -45,7 +45,7 @@ The ruleset `immutable-icrc-tags` also requires the tagged commit to be signed. 
 | `release/<kobo-version>-icrc` | `icrc-bootstrap` on Kobo tag `<kobo-version>` | Integration branch: `icrc-bootstrap` + one merge per feature branch. Tagged and deployed through the umbrella chart. Only the latest Kobo release has one: the previous branch is deleted once the next is created. |
 | `<kobo-version>-icrc.<n>` tag | release branch | Build of the release branch, e.g. `7.0.0-icrc.1`. Also the chart version. |
 
-There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. Branches are rewritten freely and force-pushed: `icrc-bootstrap` and `feature/*` are rebased when `kobo/main` advances, release branches are rebuilt when `icrc-bootstrap` changes. Tags are immutable:
+There is no separate integration branch: features are tried on the release branch, and only a tag is deployed. Branches are rewritten freely and force-pushed: `icrc-bootstrap` and `feature/*` are rebased when `kobo/main` advances, release branches are rebuilt when a feature branch or the chart content of `icrc-bootstrap` changes, and before tagging. Docs-only commits on `icrc-bootstrap` (`ICRC.md`, `work/`, `.claude/`) do not trigger a rebuild: they are not packaged, and the next rebuild picks them up. Tags are immutable:
 
 - Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch, or the release branch is deleted.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
@@ -54,7 +54,7 @@ There is no separate integration branch: features are tried on the release branc
 
 `work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
 
-Like this file, `work/` is fork-only: edit it on `icrc-bootstrap`, then rebuild the release branch (see [Applying features](#applying-features)). Commits made directly on a release branch are lost at the next rebuild.
+Like this file, `work/` is fork-only: edit it on `icrc-bootstrap` and push, no release branch rebuild needed. Its copy on the release branch may lag behind; `icrc-bootstrap` is the reference. Commits made directly on a release branch are lost at the next rebuild.
 
 ## Tests
 
@@ -129,7 +129,7 @@ Release branches are `icrc-bootstrap` plus one `--no-ff` merge per feature branc
 # Add a feature, or review changes of a merged feature, to the release branch
 git switch release/<kobo-version>-icrc && git merge --no-ff -m "Merge branch 'feature/<name>' into release/<kobo-version>-icrc" feature/<name>
 
-# Rebuild the release branch (icrc-bootstrap changed, or a feature branch was rebased), or create it for a new Kobo release
+# Rebuild the release branch (chart content of icrc-bootstrap changed, a feature branch was rebased, or before tagging), or create it for a new Kobo release
 git switch -C release/<kobo-version>-icrc icrc-bootstrap
 git merge --no-ff -m "Merge branch 'feature/<a>' into release/<kobo-version>-icrc" feature/<a>   # one per feature branch
 git push --force-with-lease icrc release/<kobo-version>-icrc
@@ -142,6 +142,8 @@ A merge also brings the `kobo/main` commits its branch is based on. The release 
 ## Tagging a release
 
 Tagging is the release procedure, separate from [Syncing with Kobo](#syncing-with-kobo): a sync only rebuilds release branches. No tag until the umbrella chart is released; until then, tests use the release branch as reference.
+
+If `git log --oneline release/<kobo-version>-icrc..icrc-bootstrap` is not empty, rebuild the release branch first (see [Applying features](#applying-features)).
 
 ```bash
 git switch release/<kobo-version>-icrc
