@@ -19,8 +19,8 @@ Git network calls are wrapped in `timeout 60`. If an SSH push or fetch hangs, us
 
 - Clean working tree. The plan is written on `icrc-bootstrap` (`work/` is fork-only).
 - No open `work/ongoing/kobo-sync-*.md`: if one exists, offer to continue it instead.
-- `timeout 60 git fetch kobo --tags --prune && timeout 60 git fetch origin --prune`.
-- Local branches equal `origin`: `git rev-list --left-right --count origin/<b>...<b>` is `0 0` for `main`, `icrc-bootstrap`, `feature/*`, `release/*`. Otherwise stop and report (upstream tracking of these branches points to `kobo/main`, so `git status` is not a reliable check). Exception: a local `feature/*` missing on `origin` whose PR is merged (GitHub deleted it) is not a mismatch, plan its deletion. If `origin` has a merge of `main` into a feature branch (GitHub "Update branch"), propose rebasing the local branch instead (`ICRC.md` "Contributing an enhancement").
+- `timeout 60 git fetch kobo --tags --prune && timeout 60 git fetch icrc --prune`.
+- Local branches equal `icrc`: `git rev-list --left-right --count icrc/<b>...<b>` is `0 0` for `main`, `icrc-bootstrap`, `feature/*`, `release/*`. Otherwise stop and report (upstream tracking of these branches points to `kobo/main`, so `git status` is not a reliable check). Exception: a local `feature/*` missing on `icrc` whose PR is merged (GitHub deleted it) is not a mismatch, plan its deletion. If `icrc` has a merge of `main` into a feature branch (GitHub "Update branch"), propose rebasing the local branch instead (`ICRC.md` "Contributing an enhancement").
 
 ## 2. Detect
 
@@ -30,10 +30,10 @@ Run read-only, in one batch:
 R=kobotoolbox/kobo-helm-chart
 merged() { gh pr list -R $R --state merged --limit 200 --json headRefName,headRepositoryOwner --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .headRefName'; }
 features() { git for-each-ref --format='%(refname:short)' refs/heads/feature/ | grep -vxF -f <(merged); }
-release() { git for-each-ref --format='%(refname:short)' refs/remotes/origin/release/ | sed 's|^origin/||' | sort -V | tail -1; }
+release() { git for-each-ref --format='%(refname:short)' refs/remotes/icrc/release/ | sed 's|^icrc/||' | sort -V | tail -1; }
 kobo_tags() { git tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V; }
 
-git rev-list --count origin/main..kobo/main                                                    # A: commits to mirror
+git rev-list --count icrc/main..kobo/main                                                    # A: commits to mirror
 kobo_tags | tail -1; release                                                                   # B: new Kobo release without release/<v>-icrc
 git log --oneline <latest-tag>..kobo/main                                                      # B: commits past the tag (CI only?)
 gh pr list -R $R --state all --limit 200 \
@@ -41,11 +41,11 @@ gh pr list -R $R --state all --limit 200 \
   --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .author.login as $a | [.number, .state, .headRefName, ([.comments[] | select(.author.login != $a) | .createdAt] + [.reviews[] | select(.author.login != $a) | .submittedAt] | sort | last // "-"), (.mergeCommit.oid // "-")] | @tsv'   # C
 git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'                           # C: merged PR released?
 for b in $(features) icrc-bootstrap; do git merge-base --is-ancestor kobo/main "$b" || echo "$b"; done            # D: to rebase
-for b in icrc-bootstrap $(features); do git merge-base --is-ancestor "$b" "origin/$(release)" || echo "$b"; done  # E: missing from release
+for b in icrc-bootstrap $(features); do git merge-base --is-ancestor "$b" "icrc/$(release)" || echo "$b"; done  # E: missing from release
 ```
 
 - **C, new activity**: last comment or review by someone other than the PR author, after the date of the previous `work/completed/kobo-sync-*.md` (all activity on the first run). Read it with `gh pr view <n> -R $R --comments` and `gh api repos/$R/pulls/<n>/comments` and summarize each request in one line.
-- **C, merged**: delete the branch if it still exists locally or on `origin`. Released when C returns a Kobo tag; if not released and the current release branch is rebuilt, it merges the PR head commit (`ICRC.md` "Syncing with Kobo").
+- **C, merged**: delete the branch if it still exists locally or on `icrc`. Released when C returns a Kobo tag; if not released and the current release branch is rebuilt, it merges the PR head commit (`ICRC.md` "Syncing with Kobo").
 - If A to E are all empty and no PR has new activity: report "fork in sync" and stop, no plan.
 
 ## 3. Write the plan
@@ -58,23 +58,23 @@ Show the sections and steps to the user and confirm before writing `work/ongoing
 Sync of the fork with `kobo/main` at `<short-sha>` (procedure: `ICRC.md` "Syncing with Kobo"). Previous sync: <link or "none">.
 
 ## Mirror Kobo
-- [ ] Fast-forward `main` to `kobo/main` (<A> commits) and push to `origin`
-- [ ] Done when: `origin/main` equals `kobo/main`
+- [ ] Fast-forward `main` to `kobo/main` (<A> commits) and push to `icrc`
+- [ ] Done when: `icrc/main` equals `kobo/main`
 
 ## Upstream PRs
 - [ ] PR <n> (`feature/<name>`): <one line per review request>; merge the branch again into the release branch
-- [ ] PR <n> merged in Kobo (<tag or "not released yet">): delete `feature/<name>` locally and on `origin`
+- [ ] PR <n> merged in Kobo (<tag or "not released yet">): delete `feature/<name>` locally and on `icrc`
 - [ ] Done when: every review request answered on its PR, merged branches deleted
 
 ## Rebase on kobo/main
 - [ ] Rebase and force-push: `feature/<a>`, ..., `icrc-bootstrap` (re-bump `Chart.yaml` above Kobo <version> on conflict)
-- [ ] Done when: every branch listed contains `kobo/main` and equals `origin`
+- [ ] Done when: every branch listed contains `kobo/main` and equals `icrc`
 
 ## Release <kobo-version>
 - [ ] Create `release/<kobo-version>-icrc` from `icrc-bootstrap` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
 - [ ] `helm lint --strict -f tests/values/required.yaml .` and `helm unittest .` pass
 - [ ] Tag `<kobo-version>-icrc.1`, update the umbrella chart in `icrc-kobo-toolbox` and review its baseline diff
-- [ ] Delete `release/<previous-version>-icrc` locally and on `origin`
+- [ ] Delete `release/<previous-version>-icrc` locally and on `icrc`
 - [ ] Done when: tag `<kobo-version>-icrc.1` pushed and pinned by the umbrella chart on test, previous release branch deleted
 
 ## Work items
@@ -85,7 +85,7 @@ Feature #<feature>, PBI #<pbi>.
 |---|---|
 ```
 
-- **Release section**: "Release <kobo-version>" when B finds a new Kobo release (new branch + `.1` tag); else "Rebuild release/<v>-icrc" when D or E is non-empty (rebuild, compare with `origin`, force-push, tag `.<n+1>` only if the tree changed outside `ICRC.md` and `work/`).
+- **Release section**: "Release <kobo-version>" when B finds a new Kobo release (new branch + `.1` tag); else "Rebuild release/<v>-icrc" when D or E is non-empty (rebuild, compare with `icrc`, force-push, tag `.<n+1>` only if the tree changed outside `ICRC.md` and `work/`).
 - If `kobo/main` has non-CI commits past the release tag, add a step to rebuild from copies rebased onto the tag (`ICRC.md` "Applying features").
 - Rebuilding the current release branch: list merged-but-unreleased PRs with their head commit to merge instead of the deleted branch.
 
