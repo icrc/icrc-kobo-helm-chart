@@ -50,8 +50,6 @@ There is no separate integration branch: features are tried on the release branc
 - Tags are never moved nor deleted, enforced by the GitHub ruleset `immutable-icrc-tags` on `*-icrc.*`. A tag keeps its commits even once a rebuild drops them from the release branch, or the release branch is deleted.
 - `7.0.0-icrc.1` is a SemVer prerelease of `7.0.0`: the umbrella chart must pin it exactly, ranges like `~7.0.0` skip it.
 
-> Reminder: `icrc-kobo-toolbox` tracks the release branch as its `kobo-helm-chart` submodule. Do not forget to update it after a rebuild or a new release branch, see "Submodules" in its [README.md](https://tfs.ext.icrc.org/ICRCCollection/DIOP%20SHARED%20Products/_git/kobo-toolbox?path=/README.md).
-
 ## Work tracking
 
 `work/` holds the plan of the chart phases of the ICRC Helm setup (overview in `icrc-kobo-toolbox`: `work/ongoing/icrc-helm-setup.md`). One file per phase, each with a completion target: `work/next/` before it starts, `work/ongoing/` while running, `work/completed/` once the target is met.
@@ -173,7 +171,7 @@ git tag -s <kobo-version>-icrc.<n> -m "<kobo-version>-icrc.<n>" && git tag -v <k
 git push icrc release/<kobo-version>-icrc <kobo-version>-icrc.<n>
 ```
 
-Then update the tag in the umbrella chart, re-render it and review the baseline diff in `icrc-kobo-toolbox`. Each environment (test, uat, PROD) pins its own tag there.
+Then update the `kobo-helm-chart` dependency of `icrc-kobo-toolbox` to the new tag (see "Submodules" in its [README.md](https://tfs.ext.icrc.org/ICRCCollection/DIOP%20SHARED%20Products/_git/kobo-toolbox?path=/README.md)), re-render the umbrella chart and review the baseline diff. This is a task of `icrc-kobo-toolbox`, done after each fork release only: syncing with Kobo or rebuilding a release branch does not update it. Each environment (test, uat, PROD) pins its own tag there.
 
 ## Fork build
 
