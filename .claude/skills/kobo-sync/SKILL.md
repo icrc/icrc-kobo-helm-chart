@@ -50,50 +50,63 @@ git log --oneline "icrc/$(release)..icrc-base" -- . ':!ICRC.md' ':!work' ':!.cla
 
 - **C, new activity**: last comment or review by someone other than the PR author, after the date of the previous `work/completed/kobo-sync-*.md` (all activity on the first run). Read it with `gh pr view <n> -R $R --comments` and `gh api repos/$R/pulls/<n>/comments` and summarize each request in one line.
 - **C, merged**: delete the branch if it still exists locally or on `icrc`. Released when C returns a Kobo tag; if not released and the current release branch is rebuilt, it merges the PR head commit (`ICRC.md` "Syncing with Kobo").
-- **F, new activity**: last comment by someone else after the date of the previous sync, same rule as C. Read it with `gh issue view <n> -R $R --comments`; each reply calling for work (new PR, change of scope) becomes a step. Also update the matching step of the phase plan (`work/ongoing/icrc-helm-phase2-upstream.md`).
+- **F, new activity**: last comment by someone else after the date of the previous sync, same rule as C. Read it with `gh issue view <n> -R $R --comments`; each reply calling for work (new PR, change of scope) becomes a step. Also update the matching step of the phase plan (`work/ongoing/icrc-helm-phase2-upstream.md`, cited by step ID, e.g. `icrc-helm-phase2-upstream#2.1`).
 - If A to E are all empty and no PR or issue has new activity: report "fork in sync" and stop, no plan.
 
 ## 3. Write the plan
 
-Show the sections and steps to the user and confirm before writing `work/ongoing/kobo-sync-<YYYY-MM-DD>.md`. Follow the `work-plan` format (steps `- [ ]`, one `Done when` per section, no em-dash). Omit sections with nothing to do.
+Show the sections and steps to the user and confirm before writing `work/ongoing/kobo-sync-<YYYY-MM-DD>.md`. Follow the `work-plan` format (phase and step IDs, slugs and `Definition` lines, steps `- [ ]`, one `Done when` per phase, no em-dash). Omit phases with nothing to do and number the remaining ones `1`, `2`, ... in the order below.
 
 ```markdown
 # Kobo sync <YYYY-MM-DD>
 
 Sync of the fork with `kobo/main` at `<short-sha>` (procedure: `ICRC.md` "Syncing with Kobo"). Previous sync: <link or "none">.
 
-## Mirror Kobo
-- [ ] Fast-forward `main` to `kobo/main` (<A> commits) and push to `icrc`
+## Phase 1 mirror-kobo: Mirror Kobo
+Definition: `main` mirrors `kobo/main` on `icrc`.
+- [ ] 1.1 fast-forward-main: Fast-forward `main` to `kobo/main` (<A> commits) and push to `icrc`
+  - Definition: no local commit on `main`, fast-forward only
 - [ ] Done when: `icrc/main` equals `kobo/main`
 
-## Upstream PRs
-- [ ] PR <n> (`feature/<name>`): <one line per review request>; merge the branch again into the release branch
-- [ ] PR <n> merged in Kobo (<tag or "not released yet">): delete `feature/<name>` locally and on `icrc`
+## Phase 2 upstream-prs: Upstream PRs
+Definition: every upstream PR from the fork answered or cleaned up after merge.
+- [ ] 2.<m> pr-<n>-review: PR <n> (`feature/<name>`): <one line per review request>; merge the branch again into the release branch
+  - Definition: <expected change on the PR>
+- [ ] 2.<m> pr-<n>-cleanup: PR <n> merged in Kobo (<tag or "not released yet">): delete `feature/<name>` locally and on `icrc`
+  - Definition: branch absent locally and on `icrc`
 - [ ] Done when: every review request answered on its PR, merged branches deleted
 
-## Upstream issues
-- [ ] Issue <n> (<title>): <reply in one line>; <action>
+## Phase 3 upstream-issues: Upstream issues
+Definition: every maintainer reply on our issues acted on.
+- [ ] 3.<m> issue-<n>: Issue <n> (<title>): <reply in one line>; <action>
+  - Definition: <expected outcome>
 - [ ] Done when: every reply acted on or recorded in the phase plan
 
-## Rebase on kobo/main
-- [ ] Rebase and force-push: `feature/<a>`, ..., `icrc-base` (re-bump `Chart.yaml` above Kobo <version> on conflict)
+## Phase 4 rebase: Rebase on kobo/main
+Definition: fork branches based on the current `kobo/main`.
+- [ ] 4.1 rebase-branches: Rebase and force-push: `feature/<a>`, ..., `icrc-base` (re-bump `Chart.yaml` above Kobo <version> on conflict)
+  - Definition: signed commits, lint and unit tests pass on each branch, push with lease
 - [ ] Done when: every branch listed contains `kobo/main` and equals `icrc`
 
-## Release <kobo-version>
-- [ ] Create `release/<kobo-version>-icrc` from `icrc-base` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
-- [ ] `helm lint --strict -f tests/values/required.yaml .` and `helm unittest .` pass
-- [ ] Delete `release/<previous-version>-icrc` locally and on `icrc`
+## Phase 5 release: Release <kobo-version>
+Definition: `release/<kobo-version>-icrc` integrates the unreleased features on the new Kobo tag.
+- [ ] 5.1 create-release: Create `release/<kobo-version>-icrc` from `icrc-base` on tag `<kobo-version>` with one `--no-ff` merge per feature branch not released upstream: <list>
+  - Definition: one signed merge per branch, diff with the tag limited to the features and fork-only files
+- [ ] 5.2 verify-release: `helm lint --strict -f tests/values/required.yaml .` and `helm unittest .` pass
+  - Definition: lint clean, every unit test passes
+- [ ] 5.3 delete-previous: Delete `release/<previous-version>-icrc` locally and on `icrc`
+  - Definition: branch absent locally and on `icrc`
 - [ ] Done when: `release/<kobo-version>-icrc` pushed with lint and unit tests passing, previous release branch deleted
 
 ## Work items
 
 PBI #<pbi>.
 
-| Plan section | Task |
+| Plan item | Task |
 |---|---|
 ```
 
-- **Release section**: "Release <kobo-version>" when B finds a new Kobo release (new branch); else "Rebuild release/<v>-icrc" when D or E is non-empty (rebuild, compare with `icrc`, force-push).
+- **Release phase**: "Release <kobo-version>" when B finds a new Kobo release (new branch); else "Rebuild release/<v>-icrc" when D or E is non-empty (rebuild, compare with `icrc`, force-push).
 - If `kobo/main` has non-CI commits past the release tag, add a step to rebuild from copies rebased onto the tag (`ICRC.md` "Applying features").
 - Rebuilding the current release branch: list merged-but-unreleased PRs with their head commit to merge instead of the deleted branch.
 
@@ -101,7 +114,7 @@ PBI #<pbi>.
 
 1. Sync PBIs have no parent: syncs are periodic over the project lifetime, not part of a Feature.
 2. Create the PBI: title `Sync fork with Kobo <latest-kobo-tag>` (the date is in the PBI metadata), iteration taken from the previous sync PBI (`## Work items` line of the latest `work/completed/kobo-sync-*.md`), area `DIOP SHARED Products\Team Data Collection` (the team backlog only shows that area; also on the Tasks), Value Area `Functional` (`Microsoft.VSTS.Common.ValueArea`; allowed: `Functional`, `Non-Functional`), assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Tag the PBI and its Tasks `KOBO`, `KOBO_HELM` and `GH_SYNC` (GitHub-related work); tags are uppercase snake case. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-base</code>).</div>`. Confirm before creating (outward-facing).
-3. Write the PBI ID in the plan's `## Work items` line, then run the `azdo-plan-sync` skill to create one Task per section and fill the table.
+3. Write the PBI ID in the plan's `## Work items` line, then run the `azdo-plan-sync` skill to create one Task per phase and fill the table.
 
 ## 5. Commit
 

@@ -1,6 +1,6 @@
 # Upstream issues for kobotoolbox/kobo-helm-chart (draft)
 
-Drafts for [phase 2](./icrc-helm-phase2-upstream.md) step 0 (#727250). Posted from the ICRC GitHub account; issue and PR links, ADO items and gap IDs are tracked in the phase 2 steps table only.
+Drafts for step `2.0 contribution-prereqs` of [phase 2](./icrc-helm-phase2-upstream.md) (#727250), one section per step, headed by its ID. Posted from the ICRC GitHub account; issue and PR links, ADO items and gap IDs are tracked in the phase 2 steps only.
 
 ## Existing upstream items
 
@@ -15,7 +15,7 @@ No existing item for OpenShift / unprivileged nginx, `X-Forwarded-Proto`, post-i
 
 ---
 
-## 1. Comment on [issue 23](https://github.com/kobotoolbox/kobo-helm-chart/issues/23): existing secrets for kpi and enketo
+## 2.1 existing-secret: Comment on [issue 23](https://github.com/kobotoolbox/kobo-helm-chart/issues/23): existing secrets for kpi and enketo
 
 We would like to work on this and open a PR. Proposed scope, before writing code:
 
@@ -29,13 +29,13 @@ Open questions: one value per component as above, or a single `kobotoolbox.exist
 
 [PR 95](https://github.com/kobotoolbox/kobo-helm-chart/pull/95) covers part of this but removes keys from the generated secret for all users; we would start from current `main` instead. Happy to coordinate with its author.
 
-## 2. Post-install Job does not load the kpi secret and configmap
+## 2.2 post-install-envfrom: Post-install Job does not load the kpi secret and configmap
 
 **Problem.** `templates/kpi/post-install-job.yaml` sets a few env vars inline but has no `envFrom`, unlike the migration Job. Commands that need the full kpi environment fail or behave differently. Example: `postInstall.command: ./manage.py create_kobo_superuser` cannot see `KOBO_SUPERUSER_USERNAME` / `KOBO_SUPERUSER_PASSWORD` set in `kpi.env.secret`.
 
 **Proposal.** Add the same `envFrom` as the migration Job (kpi Secret and ConfigMap). Since the Job runs as a `post-install` hook, both resources already exist. No new values.
 
-## 3. nginx sidecar: configurable port and securityContext
+## 2.3 nginx-port: nginx sidecar: configurable port and securityContext
 
 **Problem.** The kpi nginx sidecar listens on port 80, hardcoded in the container port, the Service `targetPort` and `nginx.conf`. It has no `securityContext`. Clusters enforcing restricted Pod Security (or OpenShift `restricted-v2`) reject or break it: non-root containers cannot bind port 80. Unprivileged images such as `nginxinc/nginx-unprivileged` listen on 8080.
 
@@ -44,7 +44,7 @@ Open questions: one value per component as above, or a single `kobotoolbox.exist
 - `nginx.securityContext` (default `{}`), applied to the sidecar container.
 - Defaults keep the current output.
 
-## 4. nginx sidecar: serve protected media from the filesystem
+## 2.4 nginx-protected-media: nginx sidecar: serve protected media from the filesystem
 
 **Problem.** With filesystem storage (no S3/GCS), kpi answers attachment downloads with `X-Accel-Redirect` to `/protected/...`, expecting nginx to serve the file from the media directory. The sidecar only defines `/protected-s3/`, and cannot mount the media volume (`kpi.extraVolumeMounts` only applies to the backend container). Attachment downloads fail for filesystem-storage deployments.
 
@@ -54,7 +54,7 @@ Open questions: one value per component as above, or a single `kobotoolbox.exist
 
 To confirm with maintainers: the exact internal path kpi uses for filesystem storage in current releases.
 
-## 5. nginx sidecar: forward X-Forwarded-Proto
+## 2.5 forward-proto: nginx sidecar: forward X-Forwarded-Proto
 
 **Problem.** The sidecar sets `Host`, `X-Real-IP` and `X-Forwarded-For` but not `X-Forwarded-Proto`. Behind a TLS-terminating ingress, Django's `SECURE_PROXY_SSL_HEADER` (`HTTP_X_FORWARDED_PROTO`) then sees `http`, which can cause redirect loops or `http://` absolute URLs depending on settings.
 
@@ -69,13 +69,13 @@ map $http_x_forwarded_proto $forwarded_proto {
 proxy_set_header X-Forwarded-Proto $forwarded_proto;
 ```
 
-## 6. imagePullSecrets is declared but never rendered
+## 2.6 image-pull-secrets: imagePullSecrets is declared but never rendered
 
 **Problem.** `values.yaml` declares `imagePullSecrets: []`, but no template uses it. Pulling kpi/enketo/nginx from a private registry requires patching the ServiceAccount outside the chart. [PR 33](https://github.com/kobotoolbox/kobo-helm-chart/pull/33) (2023) addressed this on the ServiceAccount but was closed unmerged.
 
 **Proposal.** Render `imagePullSecrets` in every pod spec (kpi, enketo, beat, workers, flower, Jobs), so it also works with `serviceAccount.create: false`. Format: list of `{name: ...}` objects, as in the default `helm create` scaffold.
 
-## 7. Unit tests for templates
+## 2.0 contribution-prereqs: Unit tests for templates
 
 **Question.** We added a [helm-unittest](https://github.com/helm-unittest/helm-unittest) suite (`tests/`, 35 tests covering kpi, enketo, jobs, nginx config, secrets, service account) to secure our changes. Would you welcome it upstream, with a CI step in `pr.yml`? If so, we would open it as a separate PR first, then add tests to each enhancement PR.
 
