@@ -1,6 +1,6 @@
 ---
 name: kobo-sync
-description: Plan a sync of the ICRC Helm chart fork with kobotoolbox/kobo-helm-chart - detect what changed upstream (kobo/main commits, new Kobo release, PR reviews and merges, stale branches), write work/ongoing/kobo-sync-<date>.md and create the AzDO PBI and Tasks. Does not run the sync itself. Trigger: /kobo-sync, "sync the fork with Kobo", "plan the Kobo sync".
+description: Plan a sync of the ICRC Helm chart fork with kobotoolbox/kobo-helm-chart - detect what changed upstream (kobo/main commits, new Kobo release, PR reviews and merges, issue replies, stale branches), write work/ongoing/kobo-sync-<date>.md and create the AzDO PBI and Tasks. Does not run the sync itself. Trigger: /kobo-sync, "sync the fork with Kobo", "plan the Kobo sync".
 ---
 
 # Plan a sync of the fork with Kobo
@@ -40,6 +40,9 @@ gh pr list -R $R --state all --limit 200 \
   --json number,title,state,headRefName,headRepositoryOwner,author,comments,reviews,mergeCommit \
   --jq '.[] | select(.headRepositoryOwner.login=="icrc") | .author.login as $a | [.number, .state, .headRefName, ([.comments[] | select(.author.login != $a) | .createdAt] + [.reviews[] | select(.author.login != $a) | .submittedAt] | sort | last // "-"), (.mergeCommit.oid // "-")] | @tsv'   # C
 git tag --contains <merge-commit> | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$'                           # C: merged PR released?
+me=$(gh api user --jq .login)
+gh issue list -R $R --search 'involves:@me' --state all --limit 200 --json number,title,state,comments \
+  --jq ".[] | [.number, .state, ([.comments[] | select(.author.login != \"$me\") | .createdAt] | sort | last // \"-\"), .title] | @tsv"   # F: issues opened or commented by us
 for b in $(features) icrc-base; do git merge-base --is-ancestor kobo/main "$b" || echo "$b"; done            # D: to rebase
 for b in $(features); do git merge-base --is-ancestor "$b" "icrc/$(release)" || echo "$b"; done                  # E: missing from release
 git log --oneline "icrc/$(release)..icrc-base" -- . ':!ICRC.md' ':!work' ':!.claude'                       # E: bootstrap chart changes missing from release (docs-only commits ignored)
@@ -47,7 +50,8 @@ git log --oneline "icrc/$(release)..icrc-base" -- . ':!ICRC.md' ':!work' ':!.cla
 
 - **C, new activity**: last comment or review by someone other than the PR author, after the date of the previous `work/completed/kobo-sync-*.md` (all activity on the first run). Read it with `gh pr view <n> -R $R --comments` and `gh api repos/$R/pulls/<n>/comments` and summarize each request in one line.
 - **C, merged**: delete the branch if it still exists locally or on `icrc`. Released when C returns a Kobo tag; if not released and the current release branch is rebuilt, it merges the PR head commit (`ICRC.md` "Syncing with Kobo").
-- If A to E are all empty and no PR has new activity: report "fork in sync" and stop, no plan.
+- **F, new activity**: last comment by someone else after the date of the previous sync, same rule as C. Read it with `gh issue view <n> -R $R --comments`; each reply calling for work (new PR, change of scope) becomes a step. Also update the matching step of the phase plan (`work/ongoing/icrc-helm-phase2-upstream.md`).
+- If A to E are all empty and no PR or issue has new activity: report "fork in sync" and stop, no plan.
 
 ## 3. Write the plan
 
@@ -66,6 +70,10 @@ Sync of the fork with `kobo/main` at `<short-sha>` (procedure: `ICRC.md` "Syncin
 - [ ] PR <n> (`feature/<name>`): <one line per review request>; merge the branch again into the release branch
 - [ ] PR <n> merged in Kobo (<tag or "not released yet">): delete `feature/<name>` locally and on `icrc`
 - [ ] Done when: every review request answered on its PR, merged branches deleted
+
+## Upstream issues
+- [ ] Issue <n> (<title>): <reply in one line>; <action>
+- [ ] Done when: every reply acted on or recorded in the phase plan
 
 ## Rebase on kobo/main
 - [ ] Rebase and force-push: `feature/<a>`, ..., `icrc-base` (re-bump `Chart.yaml` above Kobo <version> on conflict)

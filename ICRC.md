@@ -119,6 +119,14 @@ gh pr list -R kobotoolbox/kobo-helm-chart --state all --limit 200 \
 
 - `CLOSED` (rejected): keep the branch, it is carried to every release branch. Move the enhancement to the umbrella chart if it can be done without the fork.
 
+Then read new replies on the upstream issues opened or commented from the fork account, and act on them (new PR, change of scope):
+
+```bash
+gh issue list -R kobotoolbox/kobo-helm-chart --search 'involves:@me' --state all --limit 200 \
+  --json number,state,title,updatedAt --jq '.[] | [.number,.state,.updatedAt,.title] | @tsv'
+gh issue view <n> -R kobotoolbox/kobo-helm-chart --comments
+```
+
 Then rebase every feature branch not merged upstream, and `icrc-base`.
 
 ```bash
