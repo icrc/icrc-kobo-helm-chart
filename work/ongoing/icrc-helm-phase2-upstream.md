@@ -7,14 +7,14 @@ Runs in parallel with phases 3 to 5: they use the fork build until the PRs are m
 ## Completion target
 
 - Each of steps 1 to 4 and 6 has an upstream PR, from a `feature/<name>` branch on `kobo/main`, including helm-unittest cases, `Chart.yaml` bump and `CHANGELOG.md` entry.
-- All five feature branches are merged into `release/7.0.1-icrc`, and `helm lint --strict` plus `helm unittest .` pass there.
-- A tag `7.0.1-icrc.<n>` on `release/7.0.1-icrc` contains all five fixes and is the version consumed by the umbrella chart.
+- All five feature branches are merged into `release/7.0.2-icrc`, and `helm lint --strict` plus `helm unittest .` pass there.
+- A tag `7.0.2-icrc.<n>` on `release/7.0.2-icrc` contains all five fixes and is the version consumed by the umbrella chart.
 
 Upstream merge is not part of this target (tracked in phase 6 step 2).
 
 ## Procedure per step
 
-Topic branch `feature/<name>` from `kobo/main` with the fix and its helm-unittest cases, `helm lint --strict`, render diff, then a `Chart.yaml` version bump and `CHANGELOG.md` entry (required by upstream CI); upstream PR from that branch. The branch is merged (`--no-ff`) into `release/7.0.1-icrc` (the only integration branch, see `ICRC.md`), again after review changes.
+Topic branch `feature/<name>` from `kobo/main` with the fix and its helm-unittest cases, `helm lint --strict`, render diff, then a `Chart.yaml` version bump and `CHANGELOG.md` entry (required by upstream CI); upstream PR from that branch. The branch is merged (`--no-ff`) into `release/7.0.2-icrc` (the only integration branch, see `ICRC.md`), again after review changes.
 
 ## Steps
 
