@@ -78,3 +78,5 @@ proxy_set_header X-Forwarded-Proto $forwarded_proto;
 ## 7. Unit tests for templates
 
 **Question.** We added a [helm-unittest](https://github.com/helm-unittest/helm-unittest) suite (`tests/`, 35 tests covering kpi, enketo, jobs, nginx config, secrets, service account) to secure our changes. Would you welcome it upstream, with a CI step in `pr.yml`? If so, we would open it as a separate PR first, then add tests to each enhancement PR.
+
+**Reply** (ScottMillard, 2026-10-08): suite welcome; tests already in the enhancement PRs are accepted as is. Suite and CI step opened as [PR 124](https://github.com/kobotoolbox/kobo-helm-chart/pull/124).

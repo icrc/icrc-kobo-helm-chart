@@ -20,7 +20,7 @@ Topic branch `feature/<name>` from `kobo/main` with the fix and its helm-unittes
 
 | # | Step | Gap | ADO | GitHub | Status |
 |---|---|---|---|---|---|
-| 0 | Contribution prerequisites: one issue per enhancement, check stale `feature/existing-secrets`, ask about the helm-unittest suite | | #727250 | unittest suite: [issue 118](https://github.com/kobotoolbox/kobo-helm-chart/issues/118) | done |
+| 0 | Contribution prerequisites: one issue per enhancement, check stale `feature/existing-secrets`, ask about the helm-unittest suite | | #727250 | unittest suite: [issue 118](https://github.com/kobotoolbox/kobo-helm-chart/issues/118), [PR 124](https://github.com/kobotoolbox/kobo-helm-chart/pull/124) | done; suite welcomed by maintainer 2026-10-08, PR 124 open, on release branch |
 | 1 | Existing-secret support for kpi, enketo and the migration/post-install Jobs; `djangoSecret`, `enketoApiKey`, `DATABASE_URL` optional when an existing secret is set | S4 | #727218 | [issue 23 comment](https://github.com/kobotoolbox/kobo-helm-chart/issues/23#issuecomment-5993930688) | todo; scope approved by maintainer 2026-10-07: one `existingSecret` per component, drop `checksum/secret` when set |
 | 2 | `envFrom` on the post-install Job | W6 | #727219 | [issue 113](https://github.com/kobotoolbox/kobo-helm-chart/issues/113), [PR 119](https://github.com/kobotoolbox/kobo-helm-chart/pull/119) | merged upstream 2026-10-07, on release branch |
 | 3 | nginx sidecar: configurable port and securityContext (unprivileged image on OpenShift) | S2 | #727220 | [issue 114](https://github.com/kobotoolbox/kobo-helm-chart/issues/114), [PR 122](https://github.com/kobotoolbox/kobo-helm-chart/pull/122) | approval dismissed by rebase on 7.0.2 (2026-10-09), re-review needed; on release branch |
