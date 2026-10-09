@@ -10,8 +10,9 @@ Topic branch `feature/<name>` from `kobo/main` with the fix and its helm-unittes
 
 ## Phase 2 upstream-enhancements: Upstream chart enhancements
 Definition: the chart gaps blocking the ICRC deployment are fixed in the fork and proposed upstream, so the umbrella chart consumes a tagged fork release until Kobo releases them. Upstream merge is out of scope (`icrc-helm-setup#6.2`).
-- [ ] 2.1 existing-secret: Existing-secret support for kpi, enketo and the migration/post-install Jobs; `djangoSecret`, `enketoApiKey`, `DATABASE_URL` optional when an existing secret is set (gap S4, #727218, [issue 23 comment](https://github.com/kobotoolbox/kobo-helm-chart/issues/23#issuecomment-5993930688))
+- [ ] 2.1 existing-secret: Existing-secret support for kpi, enketo and the migration/post-install Jobs; `djangoSecret`, `enketoApiKey`, `DATABASE_URL` optional when an existing secret is set (gap S4, #727218, [issue 23 comment](https://github.com/kobotoolbox/kobo-helm-chart/issues/23#issuecomment-5993930688), [PR 125](https://github.com/kobotoolbox/kobo-helm-chart/pull/125))
   - Definition: one `existingSecret` per component, `checksum/secret` dropped when set, default output unchanged; scope approved by maintainer 2026-10-07
+  - PR 125 opened 2026-10-09 (chart 7.3.0): default render byte-identical to `kobo/main` for 3 value sets, Jobs also stop inlining `KC_DATABASE_URL`; on release branch (`helm lint --strict`, 61 tests pass), awaiting review
 - [ ] 2.3 nginx-port: nginx sidecar configurable port and securityContext, unprivileged image on OpenShift (gap S2, #727220, [issue 114](https://github.com/kobotoolbox/kobo-helm-chart/issues/114), [PR 122](https://github.com/kobotoolbox/kobo-helm-chart/pull/122))
   - Definition: `nginx.port` and `nginx.securityContext` values, defaults keep the current output
   - On release branch; approval dismissed by the rebase on 7.0.2 (2026-10-09), re-review needed
