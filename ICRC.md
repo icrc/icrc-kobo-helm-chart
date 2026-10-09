@@ -58,6 +58,16 @@ There is no separate integration branch: features are tried on the release branc
 
 Like this file, `work/` is fork-only: edit it on `icrc-base` and push, no release branch rebuild needed. Its copy on the release branch may lag behind; `icrc-base` is the reference. Commits made directly on a release branch are lost at the next rebuild.
 
+Each plan has an AzDO PBI with one Task per plan section. Categories are AzDO tags in uppercase snake case, never title prefixes:
+
+| AzDO tag | Applies to |
+|---|---|
+| `KOBO` | Every Kobo work item: Features, PBIs and Tasks |
+| `KOBO_HELM` | Helm chart work: phase PBIs, sync PBIs and their Tasks |
+| `GH_SYNC` | Fork syncs with Kobo on GitHub: sync PBIs and their Tasks |
+
+Phase PBIs sit under Feature #725060. Sync PBIs have no parent (periodic over the project lifetime) and are titled `Sync fork with Kobo <kobo-version>`.
+
 ## Tests
 
 [helm-unittest](https://github.com/helm-unittest/helm-unittest) suites live in `tests/`, with fixture values in `tests/values/required.yaml`. They pin the current behaviour of the templates changed by ICRC enhancements; each enhancement adds its own cases.
