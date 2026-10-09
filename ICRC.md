@@ -66,7 +66,7 @@ Each plan has an AzDO PBI with one Task per plan section. Categories are AzDO ta
 | `KOBO_HELM` | Helm chart work: phase PBIs, sync PBIs and their Tasks |
 | `GH_SYNC` | Fork syncs with Kobo on GitHub: sync PBIs and their Tasks |
 
-Phase PBIs sit under Feature #725060. Sync PBIs have no parent (periodic over the project lifetime) and are titled `Sync fork with Kobo <kobo-version>`.
+Every Kobo work item uses the area `DIOP SHARED Products\Team Data Collection`: the team backlog does not show the project root area. Phase PBIs sit under Feature #725060. Sync PBIs have no parent (periodic over the project lifetime) and are titled `Sync fork with Kobo <kobo-version>`.
 
 ## Tests
 

@@ -100,7 +100,7 @@ PBI #<pbi>.
 ## 4. Create the work items
 
 1. Sync PBIs have no parent: syncs are periodic over the project lifetime, not part of a Feature.
-2. Create the PBI: title `Sync fork with Kobo <latest-kobo-tag>` (the date is in the PBI metadata), iteration and area taken from the previous sync PBI (`## Work items` line of the latest `work/completed/kobo-sync-*.md`), assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Tag the PBI and its Tasks `KOBO`, `KOBO_HELM` and `GH_SYNC` (GitHub-related work); tags are uppercase snake case. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-base</code>).</div>`. Confirm before creating (outward-facing).
+2. Create the PBI: title `Sync fork with Kobo <latest-kobo-tag>` (the date is in the PBI metadata), iteration taken from the previous sync PBI (`## Work items` line of the latest `work/completed/kobo-sync-*.md`), area `DIOP SHARED Products\Team Data Collection` (the team backlog only shows that area; also on the Tasks), assigned to the current user (`uniqueName` from `get_me`, never the email), as are its Tasks. Tag the PBI and its Tasks `KOBO`, `KOBO_HELM` and `GH_SYNC` (GitHub-related work); tags are uppercase snake case. Description: `<div>Plan: <code>work/ongoing/kobo-sync-<date>.md</code> in icrc/icrc-kobo-helm-chart (branch <code>icrc-base</code>).</div>`. Confirm before creating (outward-facing).
 3. Write the PBI ID in the plan's `## Work items` line, then run the `azdo-plan-sync` skill to create one Task per section and fill the table.
 
 ## 5. Commit
